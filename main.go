@@ -37,7 +37,7 @@ func setupSocket(socketPath string) (net.Listener, error) {
 
 func main() {
 	log.Println("Start EPA plugin.")
-	const socketPath = "/var/run/scope/plugins/epa.sock"
+	const socketPath = "/var/run/scope/plugins/epa/epa.sock"
 
 	// Handle the exit signal
 	setupSignals(socketPath)

@@ -13,10 +13,11 @@ run: $(UPTODATE)
 	$(SUDO) docker run --rm -it \
 		--net=host \
 		-v /var/run/scope/plugins:/var/run/scope/plugins \
+		-v /var/run/:/var/run \
 		--name $(NAME) $(IMAGE)
 
 $(UPTODATE): $(EXE) Dockerfile
-	$(SUDO) docker build -t $(IMAGE) .
+	$(SUDO) docker build -t $(IMAGE):latest .
 	touch $@
 
 $(EXE): main.go
@@ -24,5 +25,5 @@ $(EXE): main.go
 
 clean:
 	- rm -rf $(UPTODATE) $(EXE)
-	- rm -rf scope-$(EXE)
+	- rm -rf  scope-epa
 	- $(SUDO) docker rmi $(IMAGE)

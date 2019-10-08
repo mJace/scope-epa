@@ -25,14 +25,14 @@ type pluginSpec struct {
 }
 
 type node struct {
-	Metrics      map[string]metric       `json:"metric"`
+	Latest      map[string]latest       `json:"latest"`
 }
 
 type metadataTemplate struct {
-	ID       string  `json:"id"`
-	Label    string  `json:"label,omitempty"`
-	Format   string  `json:"format,omitempty"`
-	Priority float64 `json:"priority,omitempty"`
+	ID       string		`json:"id"`
+	Label    string		`json:"label,omitempty"`
+	Format   string		`json:"format,omitempty"`
+	Priority float64		`json:"priority,omitempty"`
 }
 
 type topology struct {
@@ -56,8 +56,24 @@ func (p *Plugin) metadataTemplates() map[string]metadataTemplate {
 	}
 }
 
-func getContainerMounts() map[string]string {
-	affinityMap := make(map[string]string)
+func getContainerCpuset(Id string) string{
+	cli, err := client.NewClientWithOpts(client.WithHost("unix:///var/run/docker.sock"), client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+	inspectResult, err := cli.ContainerInspect(context.Background(), Id)
+	if err != nil {
+		log.Fatalln("Failed to get container Cpuset")
+	}
+
+	if inspectResult.HostConfig.CpusetCpus == "" {
+		return "All"
+	}
+	return inspectResult.HostConfig.CpusetCpus
+}
+
+func getContainerNodes() map[string]node {
+	affinityMap := make(map[string]node)
 	cli, err := client.NewClientWithOpts(client.WithHost("unix:///var/run/docker.sock"), client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
@@ -67,43 +83,30 @@ func getContainerMounts() map[string]string {
 		panic(err)
 	}
 
-	for _, container := range containers {
-		keyTmp := container.ID+"<container>"
-		affinityMap[keyTmp] = string(len(container.Mounts))
+	for _, containerTmp := range containers{
+		keyTmp := containerTmp.ID+";<container>"
+		affinityMap[keyTmp] = node {
+			map[string]latest {
+				"affinity" :
+				{
+					Date:  time.Now(),
+					Value: getContainerCpuset(containerTmp.ID),
+				},
+			},
+		}
 	}
 	return affinityMap
 }
 
-func (p *Plugin) getTopologyHost() string {
-	return "abcdefgh;<container>"
+type latest struct {
+	Date	time.Time		`json:"date"`
+	Value	string			`json:"value"`
 }
-
-type metric struct {
-	Date  time.Time `json:"date"`
-	Value string   `json:"value"`
-}
-
-func (p *Plugin) metrics() metric {
-	value := "0-7"
-	return metric{
-		Date : time.Now(),
-		Value: value,
-	}
-}
-
 
 func (p *Plugin) makeReport() (*report, error) {
-	metrics := p.metrics()
 	rpt := &report{
 		Container: topology{
-			Nodes: map[string]node{
-				p.getTopologyHost(): {
-					map[string]metric {
-						"affinity" :
-							metrics,
-					},
-				},
-			},
+			Nodes: getContainerNodes(),
 			MetadataTemplate: p.metadataTemplates(),
 		},
 		Plugins: []pluginSpec{
