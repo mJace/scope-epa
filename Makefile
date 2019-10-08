@@ -24,4 +24,5 @@ $(EXE): main.go
 
 clean:
 	- rm -rf $(UPTODATE) $(EXE)
+	- rm -rf scope-$(EXE)
 	- $(SUDO) docker rmi $(IMAGE)

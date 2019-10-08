@@ -1,4 +1,4 @@
-module github.com/mJace/scope-volume-count
+module github.com/mJace/scope-epa
 
 go 1.12
 
